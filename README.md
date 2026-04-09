@@ -83,4 +83,4 @@ syslog.py               Device syslog capture helper
 
 ## License
 
-This project is provided as-is for security research purposes. Use at your own risk.
+MIT License. See [LICENSE](LICENSE) for details.
