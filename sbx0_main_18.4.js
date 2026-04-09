@@ -8538,7 +8538,7 @@
         const gpuFcallDisableSleep = gpu_fcall_disable_sleep;
         const addrof = p.addrof;
         const sc_slide = p.slide;
-        const sbx1_script = getJS('/sbx1_main.js?' + Date.now());
+        const sbx1_script = getJS('sbx1_main.js?' + Date.now());
         print("sbx1 fetched, length: " + (sbx1_script ? sbx1_script.length : "null"));
         try {
           eval(sbx1_script);
