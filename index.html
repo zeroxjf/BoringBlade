@@ -1537,6 +1537,23 @@
       }
     }
 
+    function markFailed(message) {
+      if (doneSignal) return;
+      doneSignal = true;
+      try { sessionStorage.removeItem('ls_running'); } catch(e) {}
+      var installStatusEl = document.getElementById('installStatus');
+      if (installStatusEl) {
+        installStatusEl.classList.add('error');
+        installStatusEl.dataset.sbxDone = '';
+        installStatusEl.textContent = message || 'Exploit failed. Force-quit Safari and try again.';
+      }
+      var btn = document.getElementById('runBtn');
+      if (btn && canRun) {
+        btn.textContent = 'Install Selected';
+        btn.className = 'btn btn-run';
+      }
+    }
+
     // Mirrors the sbx0 printf-via-sandbox-deny breadcrumb that fires right
     // after SBX0 lands (the last log line that reliably makes it out before
     // Safari freezes during PE / SpringBoard injection). rce_loader.js
@@ -1544,23 +1561,26 @@
     // {type:'lightsaber_log', text}, so we just substring match the stage
     // tag and update the install card.
     function handleProgressLog(text) {
-      if (!text || typeof text !== 'string') return;
-      if (text.indexOf('sbx0: [+] SBX0 complete') === -1) return;
+      if (!text || typeof text !== 'string') return false;
+      if (text.indexOf('sbx0: [+] SBX0 complete') === -1) return false;
       var el = document.getElementById('installStatus');
-      if (!el) return;
-      if (el.dataset.sbxDone === '1') return;
+      if (!el) return true;
+      if (el.dataset.sbxDone === '1') return true;
       el.dataset.sbxDone = '1';
       el.classList.remove('error');
       el.textContent = 'kernel exploit + sandbox escape underway, attempting install. Safari will freeze, wait ~30 more seconds to see if changes took hold';
+      return true;
     }
 
-    var chainReportedProgress = false;
+    var chainSawActivity = false;
+    var chainReachedSbx0 = false;
     window.addEventListener('message', function(event) {
       var data = event.data || {};
       if (data.type === 'lightsaber_done') markDone();
+      if (data.type === 'lightsaber_error') markFailed(data.text);
       if (data.type === 'lightsaber_log') {
-        chainReportedProgress = true;
-        handleProgressLog(data.text);
+        chainSawActivity = true;
+        if (handleProgressLog(data.text)) chainReachedSbx0 = true;
       }
     });
 
@@ -1632,6 +1652,8 @@
         }
       } catch(e) {}
       doneSignal = false;
+      chainSawActivity = false;
+      chainReachedSbx0 = false;
       if (installStatusEl) {
         installStatusEl.classList.remove('error');
         installStatusEl.textContent = 'WebKit exploit \u2192 sandbox escape \u2192 kernel exploit \u2192 process injection is underway\u2026';
@@ -1671,11 +1693,16 @@
       // reliable across versions, and the upstream chain expects the user to
       // notice that "Safari froze/crashed/reloaded means it worked" anyway.
       setTimeout(function() {
-        if (chainReportedProgress) { markDone(); }
-        else {
-          var el = document.getElementById('installStatus');
-          if (el) { el.classList.add('error'); el.textContent = 'Timed out \u2014 no response from exploit. Force-quit Safari and try again.'; }
+        if (doneSignal) return;
+        if (chainReachedSbx0) {
+          markDone();
+          return;
         }
+        if (chainSawActivity) {
+          markFailed('Timed out before sandbox escape completed. Force-quit Safari and try again.');
+          return;
+        }
+        markFailed('Timed out \u2014 no response from exploit. Force-quit Safari and try again.');
       }, 60000);
 
       // Force a layout flush on the status + button text writes above so

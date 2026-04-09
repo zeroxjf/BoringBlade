@@ -56,6 +56,7 @@ try {
 }
 var basePrefix = location.pathname.replace(/\/[^\/]*$/, '');
 var localHost = location.origin + basePrefix;
+var __ls_terminal_sent = false;
 function print(x, reportError = false, dumphex = false) {
     let out = ('[' + (new Date().getTime() - logStart) + 'ms] ').padEnd(10) + x;
     console.log(out);
@@ -88,6 +89,8 @@ function print(x, reportError = false, dumphex = false) {
 }
 function redirect()
 {
+    if (__ls_terminal_sent) return;
+    __ls_terminal_sent = true;
     try { sessionStorage.removeItem('ls_running'); } catch(e) {}
     // Use '*' as targetOrigin to match upstream DarkSword. location.origin
     // would silently drop the message if the iframe's computed origin
@@ -95,6 +98,15 @@ function redirect()
     // mismatch, etc.) - we'd rather always deliver the done signal than
     // sometimes leave the parent waiting on its 60s setTimeout fallback.
     try { window.parent.postMessage({ type: 'lightsaber_done' }, '*'); } catch (e) {}
+}
+function fail(reason)
+{
+    if (__ls_terminal_sent) return;
+    __ls_terminal_sent = true;
+    let text = reason ? String(reason) : 'Unknown loader failure';
+    print("FAIL: " + text, true);
+    try { sessionStorage.removeItem('ls_running'); } catch(e) {}
+    try { window.parent.postMessage({ type: 'lightsaber_error', text: text }, '*'); } catch (e) {}
 }
 function getJS(fname,method = 'GET')
 {
@@ -183,7 +195,9 @@ let workerBlobUrl = URL.createObjectURL(workerBlob);
         print("Origin: " + origin);
         const worker = new Worker(workerBlobUrl);
         worker.onerror = function(e) {
-            print("WORKER ERROR: " + (e.message || e) + " at " + (e.filename || '?') + ":" + (e.lineno || '?'), true);
+            const msg = (e.message || e) + " at " + (e.filename || '?') + ":" + (e.lineno || '?');
+            print("WORKER ERROR: " + msg, true);
+            fail("Worker error: " + msg);
         };
         print("Worker created");
         const dlopen_workers = [];
@@ -296,6 +310,11 @@ let workerBlobUrl = URL.createObjectURL(workerBlob);
                 }
                 break;
             }
+            case 'stage1_failed':
+            {
+                fail("Stage1 failed: " + (data.error || "unknown error"));
+                break;
+            }
             default:
             {
                 print("[MSG] Unknown message type: " + data.type);
@@ -369,13 +388,14 @@ let workerBlobUrl = URL.createObjectURL(workerBlob);
                 }
             }
             print("All " + maxRetries + " check_attempt retries exhausted", true);
-            redirect();
+            fail("All " + maxRetries + " check_attempt retries exhausted");
         })();
             }
         }
         catch(e)
         {
             print("Got exception on something: " + e, true);
+            fail("Loader exception: " + e);
         }
     }
     main();
