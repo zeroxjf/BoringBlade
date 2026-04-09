@@ -7694,7 +7694,7 @@
       const res = new Map();
       for (let offset = 0n; offset < buffer_size; offset += entry_size) {
         const key = map_buffer_u64[offset / 8n];
-        if (key) {
+        if (key && key != 0xffffffffffffffffn) {
           const value = map_buffer_u64[(offset + key_size) / 8n];
           res.set(key, value);
         }

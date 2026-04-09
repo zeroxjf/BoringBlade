@@ -182,6 +182,9 @@ let workerBlobUrl = URL.createObjectURL(workerBlob);
         const origin = location.origin;
         print("Origin: " + origin);
         const worker = new Worker(workerBlobUrl);
+        worker.onerror = function(e) {
+            print("WORKER ERROR: " + (e.message || e) + " at " + (e.filename || '?') + ":" + (e.lineno || '?'), true);
+        };
         print("Worker created");
         const dlopen_workers = [];
         async function prepare_dlopen_workers() {

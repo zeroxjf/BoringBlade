@@ -1554,10 +1554,14 @@
       el.textContent = 'kernel exploit + sandbox escape underway, attempting install. Safari will freeze, wait ~30 more seconds to see if changes took hold';
     }
 
+    var chainReportedProgress = false;
     window.addEventListener('message', function(event) {
       var data = event.data || {};
       if (data.type === 'lightsaber_done') markDone();
-      if (data.type === 'lightsaber_log') handleProgressLog(data.text);
+      if (data.type === 'lightsaber_log') {
+        chainReportedProgress = true;
+        handleProgressLog(data.text);
+      }
     });
 
     function confirmInstall() {
@@ -1666,7 +1670,13 @@
       // iOS Safari's cross-origin / detached-frame access semantics aren't
       // reliable across versions, and the upstream chain expects the user to
       // notice that "Safari froze/crashed/reloaded means it worked" anyway.
-      setTimeout(markDone, 60000);
+      setTimeout(function() {
+        if (chainReportedProgress) { markDone(); }
+        else {
+          var el = document.getElementById('installStatus');
+          if (el) { el.classList.add('error'); el.textContent = 'Timed out \u2014 no response from exploit. Force-quit Safari and try again.'; }
+        }
+      }, 60000);
 
       // Force a layout flush on the status + button text writes above so
       // the browser sees them as committed style changes before we yield.
