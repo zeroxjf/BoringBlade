@@ -397,6 +397,7 @@ self[1] = boxed_arr;
         catch(e)
         {
           print("got exception on stage1: " + e);
+          self.postMessage({ type: 'stage1_failed', error: e.toString() });
         }
           break;
         }

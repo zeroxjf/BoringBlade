@@ -7022,7 +7022,7 @@
   function nextIdentifier() {
     return identifier++;
   }
-  const crash_timeout = 100;
+  const crash_timeout = 200;
   const runLoopHolder_tid = read64(offsets.runLoopHolder_tid);
   LOG(`runLoopHolder_tid: ${runLoopHolder_tid.hex()}`);
   const webProcess = read64(offsets.WebProcess_singleton);

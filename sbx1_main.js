@@ -6275,10 +6275,12 @@
             thread_group_lock(exp_write_threads, n_of_current_exp_write_threads);
             return false;
           }
-          thread_group_lock(exp_write_threads, n_of_current_exp_write_threads);
-          n_of_current_exp_write_threads = (n_of_current_exp_write_threads + 1n) % n_of_exp_write_threads;
-          if (n_of_current_exp_write_threads == 0n) {
-            n_of_current_exp_write_threads = 1n;
+          {
+            let prev_count = n_of_current_exp_write_threads;
+            thread_group_lock(exp_write_threads, prev_count);
+            let new_count = (prev_count + 1n) % n_of_exp_write_threads;
+            if (new_count == 0n) new_count = 1n;
+            n_of_current_exp_write_threads = new_count;
           }
           continue;
         }
@@ -6338,7 +6340,7 @@
           }
         }
 
-        //mach_port_deallocate(mach_task_self(), connection["reply_port"]);
+        mach_port_deallocate(mach_task_self(), connection["reply_port"]);
         mach_port_deallocate(mach_task_self(), connection["client_port"]);
 
         if (alive) {

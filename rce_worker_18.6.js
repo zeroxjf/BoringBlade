@@ -8605,7 +8605,7 @@ async function _aarw_main() {
         })()
 
         async function _make_rw(p_rce, mk_stage1, verify = false) {
-            for (let i = 0; i < 20000; ++i) {
+            for (let i = 0; i < 100000; ++i) {
                 _f2i(i);
                 _i2f(i);
             }
