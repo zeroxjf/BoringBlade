@@ -607,6 +607,14 @@
       opacity: 1;
       background: var(--card-alt);
     }
+    .tweak-row.testing {
+      opacity: 0.45;
+      background: var(--card-inset);
+    }
+    .tweak-row.testing.checked {
+      opacity: 0.7;
+      background: var(--card-alt);
+    }
     .tweak-row-badge {
       display: inline-block;
       font-size: 0.58rem;
@@ -1083,6 +1091,27 @@
           </div>
         </div>
 
+        <div class="tweak-row testing" id="tweakRowThreeapp">
+          <div class="tweak-row-head">
+            <button type="button" class="tweak-row-title" aria-expanded="false" aria-controls="tweakDetailThreeapp">
+              <span class="tweak-row-caret" aria-hidden="true">&rsaquo;</span>
+              <span class="tweak-row-name">3-App Bypass</span>
+              <span class="tweak-row-badge" style="color:#7d0202;background:#ffe0e0;border-color:#ff4040">in testing, avoid</span>
+            </button>
+            <label class="tweak-toggle" aria-label="Enable 3-App Bypass">
+              <input type="checkbox" id="tweakThreeapp">
+              <span class="tweak-toggle-track" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="tweak-row-detail" id="tweakDetailThreeapp" hidden>
+            <div class="tweak-row-desc">Patches MobileGestalt to set InternalInstall + InternalStorage, enabling the 3-app sideloading bypass. Persists until MobileGestalt cache is regenerated (reboot or system update). Same mechanism as <a href="https://github.com/leminlimez/Nugget" target="_blank" rel="noopener">Nugget</a>.</div>
+          </div>
+          <div class="tweak-row-options">
+            <div class="tweak-row-desc tweak-row-desc-inline">Patches MobileGestalt to set InternalInstall + InternalStorage, enabling the 3-app sideloading bypass. Persists until MobileGestalt cache is regenerated. Same mechanism as <a href="https://github.com/leminlimez/Nugget" target="_blank" rel="noopener">Nugget</a>.</div>
+            <div class="tweak-row-notes"><strong>Note:</strong> Requires respring or reboot to take effect. May conflict with existing Nugget modifications.</div>
+          </div>
+        </div>
+
       </div>
 
       <div class="install-zone">
@@ -1340,7 +1369,8 @@
     // slide into view when the toggle is on.
     var tweakRows = [
       { rowId: 'tweakRowFiveicon', cbId: 'tweakFiveicon', name: 'fiveicon' },
-      { rowId: 'tweakRowPowercuff', cbId: 'tweakPowercuff', name: 'powercuff' }
+      { rowId: 'tweakRowPowercuff', cbId: 'tweakPowercuff', name: 'powercuff' },
+      { rowId: 'tweakRowThreeapp', cbId: 'tweakThreeapp', name: 'threeapp' }
     ];
     function syncTweakRow(row) {
       var el = document.getElementById(row.rowId);
@@ -1389,6 +1419,10 @@
     var sbcOptionsWrap = document.querySelector('#tweakRowFiveicon .tweak-row-options');
     if (sbcOptionsWrap) {
       sbcOptionsWrap.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+    var taOptionsWrap = document.querySelector('#tweakRowThreeapp .tweak-row-options');
+    if (taOptionsWrap) {
+      taOptionsWrap.addEventListener('click', function(e) { e.stopPropagation(); });
     }
     // Slider binding: keep the display value in sync with the native range
     // input, live while dragging. The count constants are used by both the
