@@ -43,17 +43,6 @@ Visit [zeroxjf.github.io/lightsaber](https://zeroxjf.github.io/lightsaber/) in S
 
 **If it fails** (page flash, "A problem repeatedly occurred", or "webpage crashed" banner): clear Safari's cache (book icon > Clear), reload, and retry. If it keeps failing, reboot, clear cache again, and try once more.
 
-## Building / development
-
-There is no build step. The chain is plain JavaScript served as static files via GitHub Pages. Clone, edit, push.
-
-```
-git clone https://github.com/zeroxjf/lightsaber.git
-cd lightsaber
-# serve locally for testing
-python3 -m http.server 8000
-```
-
 ## Project structure
 
 ```
