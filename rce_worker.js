@@ -533,11 +533,16 @@ self[1] = boxed_arr;
           p.efficient_search = function (begin, end, bytes) {
             const needle = String.fromCharCode(...bytes);
             const finder = p.create_jsstring(begin, end - begin);
+            const deadline = Date.now() + 5000;
             while (true) {
               const index = finder.indexOf(needle);
               if (index != -1) {
                 print(`index:${index}`);
                 return begin + BigInt(index);
+              }
+              if (Date.now() > deadline) {
+                print("efficient_search: timeout after 5s");
+                throw new Error("stack search timeout");
               }
             }
           };
@@ -641,7 +646,15 @@ self[1] = boxed_arr;
           interpose(offsets.CMPhoto__CMPhotoCompressionSessionAddAuxiliaryImageFromDictionaryRepresentation, offsets.libdyld__dlopen);
           interpose(offsets.CMPhoto__CMPhotoCompressionSessionAddCustomMetadata, offsets.libdyld__dlsym);
           interpose(offsets.CMPhoto__CMPhotoCompressionSessionAddExif, offsets.dyld__signPointer);
-          while (p.read64(p.p_InterposeTupleAll_size) != 0x100n);
+          {
+            const deadline = Date.now() + 10000;
+            while (p.read64(p.p_InterposeTupleAll_size) != 0x100n) {
+              if (Date.now() > deadline) {
+                print("interpose spin-wait timeout after 10s");
+                throw new Error("interpose timeout");
+              }
+            }
+          }
           print('InterposeTupleAll.size has been written');
           const initMediaAccessibilityMACaptionAppearanceGetDisplayType = p.read64(offsets.WebCore__softLinkMediaAccessibilityMACaptionAppearanceGetDisplayType);
           print(`initMediaAccessibilityMACaptionAppearanceGetDisplayType: ${initMediaAccessibilityMACaptionAppearanceGetDisplayType.hex()}`);

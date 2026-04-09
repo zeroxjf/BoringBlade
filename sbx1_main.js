@@ -6290,12 +6290,22 @@
       }
       let alive = false;
       if (success) {
-        while (true) {
-          surface_address_remote = uread64(surface_address + 0x8n);
-          if (surface_address_remote != 0n) {
-            break;
+        {
+          const poll_start = Date.now();
+          while (true) {
+            surface_address_remote = uread64(surface_address + 0x8n);
+            if (surface_address_remote != 0n) {
+              break;
+            }
+            if (Date.now() - poll_start > 5000) {
+              LOG("[x] Timed out waiting for surface_address_remote (5s)");
+              success = false;
+              break;
+            }
+            usleep(1n);
           }
         }
+        if (!success) break;
         LOG(`surface_address_remote: ${surface_address_remote.hex()}`);
         setup_nativefcall_fcall();
         {
@@ -6380,6 +6390,7 @@
           return MPD_FCALL_TIMED_OUT;
         }
       }
+      usleep(1n);
     }
     let return_value = uread64(mpd_fcall_retval_ptr);
     return return_value;
@@ -6496,8 +6507,15 @@
     uwrite64(final_fcall_buf_local + 0x28n, 0xcafedeadn);
     uwrite64(nativefcall_buf_local, pacia(self_loop, 0n));
     uwrite64(surface_address, pacia(init_fcall, 0n));
-    while (uread64(final_fcall_buf_local + 0x28n) == 0xcafedeadn) {
-      usleep(1n);
+    {
+      const init_start = Date.now();
+      while (uread64(final_fcall_buf_local + 0x28n) == 0xcafedeadn) {
+        usleep(1n);
+        if (Date.now() - init_start > 10000) {
+          LOG("[x] setup_nativefcall_fcall timed out after 10s - remote process likely crashed");
+          return;
+        }
+      }
     }
   }
   function reset_nativefcall(surface, x0_remote) {

