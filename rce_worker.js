@@ -967,6 +967,13 @@ self[1] = boxed_arr;
           const rce_end = Date.now();
           log(`-`.repeat(0x28));
           try {
+            const sbx1_prefetch = getJS('sbx1_main.js?' + Date.now());
+            if (sbx1_prefetch && sbx1_prefetch.length > 0) {
+              p.prefetched_sbx1_script = sbx1_prefetch;
+              log("[stage1] prefetched sbx1_main.js bytes=" + sbx1_prefetch.length);
+            } else {
+              log("[stage1] sbx1_main.js prefetch returned empty");
+            }
             // local version
             const sbx0_script = getJS('sbx0_main_18.4.js?' + Date.now());
             log("after get js");

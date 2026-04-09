@@ -8547,12 +8547,27 @@
         const gpuFcallDisableSleep = gpu_fcall_disable_sleep;
         const addrof = p.addrof;
         const sc_slide = p.slide;
-        const sbx1_script = getJS('sbx1_main.js?' + Date.now());
+        LOG(`[i] preparing SBX1 handoff`);
+        let sbx1_script = p.prefetched_sbx1_script;
+        if (sbx1_script && sbx1_script.length > 0) {
+          LOG(`[i] using prefetched sbx1_main.js (${sbx1_script.length} bytes)`);
+        } else {
+          LOG(`[i] prefetched sbx1_main.js missing, fetching inline`);
+          sbx1_script = getJS('sbx1_main.js?' + Date.now());
+        }
+        if (!sbx1_script || sbx1_script.length === 0) {
+          LOG(`[x] sbx1_main.js fetch returned empty`);
+          throw new Error('sbx1_main.js fetch returned empty');
+        }
+        LOG(`[i] sbx1_main.js ready (${sbx1_script.length} bytes)`);
         print("sbx1 fetched, length: " + (sbx1_script ? sbx1_script.length : "null"));
         try {
+          LOG(`[i] evaluating sbx1_main.js`);
           eval(sbx1_script);
+          LOG(`[i] sbx1_main.js eval returned`);
           print("sbx1 eval completed successfully");
         } catch(sbx1_err) {
+          LOG(`[x] sbx1_main.js eval threw: ${sbx1_err}`);
           print("SBX1 ERROR: " + sbx1_err, true);
           print("SBX1 ERROR stack: " + (sbx1_err.stack || "no stack"), true);
         }

