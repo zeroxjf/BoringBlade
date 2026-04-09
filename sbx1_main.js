@@ -6361,11 +6361,15 @@
             }
           }
         }
-
-        mach_port_deallocate(mach_task_self(), connection["reply_port"]);
-        mach_port_deallocate(mach_task_self(), connection["client_port"]);
+        LOG("[i] deallocating reply_port");
+        let reply_port_kr = mach_port_deallocate(mach_task_self(), connection["reply_port"]);
+        LOG(`[i] reply_port deallocate returned ${reply_port_kr.hex()}`);
+        LOG("[i] deallocating client_port");
+        let client_port_kr = mach_port_deallocate(mach_task_self(), connection["client_port"]);
+        LOG(`[i] client_port deallocate returned ${client_port_kr.hex()}`);
 
         if (alive) {
+          LOG("[i] nativefcall path is alive; leaving service loop");
           break;
         }
       }
@@ -6375,6 +6379,7 @@
       return false;
     }
     LOG("done");
+    LOG("[i] sbx1sbx1 returning success");
     return true;
   }
   function mpd_fcall_check_for_return() {
