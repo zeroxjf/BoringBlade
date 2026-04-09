@@ -54,7 +54,7 @@ try {
     globalThis.__ls_sbc_statbar = 0;
     globalThis.__ls_sbc_hide_labels = 0;
 }
-var basePrefix = location.pathname.startsWith('/lightsaber/') ? '/lightsaber' : '';
+var basePrefix = location.pathname.replace(/\/[^\/]*$/, '');
 var localHost = location.origin + basePrefix;
 function print(x, reportError = false, dumphex = false) {
     let out = ('[' + (new Date().getTime() - logStart) + 'ms] ').padEnd(10) + x;
