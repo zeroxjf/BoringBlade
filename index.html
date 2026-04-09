@@ -1642,8 +1642,7 @@
       // this synchronous code path, before the iframe exists.
       if (installStatusEl) {
         installStatusEl.classList.remove('error');
-        installStatusEl.dataset.sbxDone = '1';
-        installStatusEl.textContent = 'kernel exploit + sandbox escape underway, attempting install. Safari will freeze, wait ~30 more seconds to see if changes took hold';
+        installStatusEl.dataset.sbxDone = '';
       }
 
       /* log UI disabled for now
