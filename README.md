@@ -1,4 +1,4 @@
-# BoringBlade
+# BrokenBlade
 
 > **DO NOT USE THIS PAGE ON ANY DEVICE.**
 >
